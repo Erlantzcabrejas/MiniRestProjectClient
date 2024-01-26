@@ -11,10 +11,6 @@ public class Customer {
     private String country;
     private String postcode;
 
-    public Customer() {
-        super();
-    }
-
     public Customer(Long reference, String name, String address1, String address2, String town, String county,
                     String country, String postcode) {
         super();

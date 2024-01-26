@@ -87,7 +87,6 @@ public class Main {
             }
             in.close();
 
-            // print result
             System.out.println(response);
         } else if(responseCode == HttpURLConnection.HTTP_NOT_FOUND){
             System.out.println("Customer was not found.");
