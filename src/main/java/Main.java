@@ -5,11 +5,12 @@ import java.io.*;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.InputMismatchException;
 import java.util.Scanner;
 
 public class Main {
 
-    public static void main(String[] args) throws IOException {
+    public static void main(String[] args) throws Exception {
         Scanner myObj = new Scanner(System.in);
         Scanner referenceObj = new Scanner(System.in);
 
@@ -23,8 +24,13 @@ public class Main {
                 addCustomers();
             }else if(action.equalsIgnoreCase("read")) {
                 System.out.println("Insert the customers reference :");
-                Long reference = referenceObj.nextLong();
-                readCustomerData(reference);
+                try{
+                    Long reference = referenceObj.nextLong();
+                    readCustomerData(reference);
+                }catch(InputMismatchException e){
+                    referenceObj = new Scanner(System.in);
+                    System.out.println("Introduce a numeric value for the reference");
+                }
             }else if(action.equalsIgnoreCase("exit")){
                 System.out.println("Exiting the program...");
             }else{
@@ -33,40 +39,41 @@ public class Main {
         }
     }
 
-    public static void addCustomers() throws IOException {
+    public static void addCustomers() throws Exception {
         String jsonData = readCSVFile();
+        if(jsonData != null && !jsonData.trim().isEmpty()) {
+            URL url = new URL("http://localhost:8080/api/customers");
+            HttpURLConnection con = (HttpURLConnection) url.openConnection();
+            con.setRequestMethod("POST");
+            con.setRequestProperty("Content-Type", "application/json");
 
-        URL url = new URL("http://localhost:8080/api/customers");
-        HttpURLConnection con = (HttpURLConnection) url.openConnection();
-        con.setRequestMethod("POST");
-        con.setRequestProperty("Content-Type", "application/json");
+            con.setDoOutput(true);
+            OutputStream os = con.getOutputStream();
 
-        con.setDoOutput(true);
-        OutputStream os = con.getOutputStream();
+            PrintWriter writer = new PrintWriter(con.getOutputStream());
+            writer.print(jsonData);
+            writer.flush();
 
-        PrintWriter writer = new PrintWriter(con.getOutputStream());
-        writer.print(jsonData);
-        writer.flush();
+            os.flush();
+            os.close();
 
-        os.flush();
-        os.close();
+            int responseCode = con.getResponseCode();
+            System.out.println("POST Response Code :: " + responseCode);
 
-        int responseCode = con.getResponseCode();
-        System.out.println("POST Response Code :: " + responseCode);
+            if (responseCode == HttpURLConnection.HTTP_OK) { //success
+                BufferedReader in = new BufferedReader(new InputStreamReader(con.getInputStream()));
+                String inputLine;
+                StringBuffer response = new StringBuffer();
 
-        if (responseCode == HttpURLConnection.HTTP_OK) { //success
-            BufferedReader in = new BufferedReader(new InputStreamReader(con.getInputStream()));
-            String inputLine;
-            StringBuffer response = new StringBuffer();
+                while ((inputLine = in.readLine()) != null) {
+                    response.append(inputLine);
+                }
+                in.close();
 
-            while ((inputLine = in.readLine()) != null) {
-                response.append(inputLine);
+                System.out.println(response);
+            } else {
+                System.out.println("POST request did not work.");
             }
-            in.close();
-
-            System.out.println(response);
-        } else {
-            System.out.println("POST request did not work.");
         }
     }
 
@@ -95,23 +102,32 @@ public class Main {
         }
     }
 
-    public static String readCSVFile() throws IOException{
+    public static String readCSVFile(){
         File csvFile = new File("src/main/resources/data/Customers.csv");
-
         ArrayList<Customer> listOfCustomers = new ArrayList<>();
+        String json = "";
 
-        BufferedReader br = new BufferedReader(new FileReader(csvFile));
-        String line;
-        while ((line = br.readLine()) != null) {
-            String[] customerArray = line.split(",");
-            Customer customer = new Customer(Long.parseLong(customerArray[0]), customerArray[1], customerArray[2], customerArray[3], customerArray[4], customerArray[5],
-                    customerArray[6], customerArray[7]);
+        BufferedReader br = null;
+        try {
+            br = new BufferedReader(new FileReader(csvFile));
+            String line;
 
-            listOfCustomers.add(customer);
+            while ((line = br.readLine()) != null) {
+                String[] customerArray = line.split(",");
+                Customer customer = new Customer(Long.parseLong(customerArray[0].trim()), customerArray[1].trim(), customerArray[2].trim(), customerArray[3].trim(), customerArray[4].trim(), customerArray[5].trim(),
+                        customerArray[6], customerArray[7]);
+
+                listOfCustomers.add(customer);
+            }
+
+            json = new Gson().toJson(listOfCustomers);
+
+            return json;
+        }catch(FileNotFoundException e){
+            System.out.println("The file Customers.csv could not be found");
+        }catch(Exception e  ){
+            System.out.println("Error while reading the customers");
         }
-
-        String json = new Gson().toJson(listOfCustomers);
-
         return json;
     }
 }
