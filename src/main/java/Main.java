@@ -16,7 +16,7 @@ public class Main {
 		String action = "";
 
         while (!action.equalsIgnoreCase("exit")){
-            System.out.println("Choose to INSERT values or READ a customers information: ");
+            System.out.println("Choose to INSERT values, READ a customers information or EXIT to finish: ");
             action = myObj.nextLine();
 
             if(action.equalsIgnoreCase("insert")){
